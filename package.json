@@ -2,7 +2,7 @@
   "name": "octopus-listener",
   "version": "1.0.0",
   "private": true,
-  "description": "Traffic listener for issamansour.com firewall testing — logs every hit to Supabase",
+  "description": "Standalone traffic logger — records every hit to /logging into Supabase",
   "scripts": {
     "setup-db": "node scripts/setup-db.js",
     "test-log": "node scripts/test-log.js",

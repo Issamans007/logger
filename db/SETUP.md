@@ -10,8 +10,8 @@ project for you (it needs your Supabase login).
    - **Name:** `octopus-listener`
    - **Database password:** generate a strong one and save it (you rarely need
      it, but you can't recover it — only reset it).
-   - **Region:** pick the one closest to where issamansour.com's real visitors
-     are. For Lebanon, **Frankfurt (eu-central-1)** is the usual best latency.
+   - **Region:** pick the one closest to where the traffic you expect to log will originate.
+     Frankfurt (eu-central-1) is a common low-latency choice for the Middle East / Europe.
    - **Plan:** Free.
 3. Wait ~2 minutes for it to provision.
 

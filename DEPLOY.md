@@ -61,5 +61,5 @@ Done. It now logs everything that reaches it.
 - **Pointing traffic at it:** to test the collector, add your Netlify URL to the
   octopus generator's target allowlist and aim a run at it — every session shows
   up in `hits`, tagged `is_synthetic = true` via the `x-qa-test-id` header. To
-  capture *organic* visitors later, embed a 1-pixel beacon on issamansour.com
-  that requests your Netlify URL.
+  capture organic visitors later, embed a 1-pixel beacon on any site you own
+  that requests your Netlify /logging URL.
