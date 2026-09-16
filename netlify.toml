@@ -5,24 +5,29 @@
 [functions]
   node_bundler = "esbuild"
 
-# Order matters: first match wins. The dashboard and its data API are carved
-# out BEFORE the catch-all, so they are never sent to the logger.
+# ---- ONLY /logging is recorded ----
+[[redirects]]
+  from = "/logging"
+  to = "/.netlify/functions/log"
+  status = 200
+  force = true
 
-# 1. the dashboard UI (password-gated in the page itself)
+[[redirects]]
+  from = "/logging/*"
+  to = "/.netlify/functions/log"
+  status = 200
+  force = true
+
+# ---- private dashboard to view the logs ----
 [[redirects]]
   from = "/dashboard"
   to = "/dash.html"
   status = 200
 
-# 2. the protected data API the dashboard reads from
 [[redirects]]
   from = "/api/data"
   to = "/.netlify/functions/data"
   status = 200
 
-# 3. everything else on the site is logged
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/log"
-  status = 200
-  force = true
+# Any other path (/, /favicon.ico, random bot paths) serves static files
+# and is NOT logged. No catch-all here on purpose.
