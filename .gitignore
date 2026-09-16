@@ -1,3 +1,6 @@
 node_modules/
 .env
 db/credential.txt
+
+# Local Netlify folder
+.netlify

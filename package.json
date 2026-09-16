@@ -2,14 +2,16 @@
   "name": "octopus-listener",
   "version": "1.0.0",
   "private": true,
-  "description": "Standalone traffic logger — records every hit to /logging into Supabase",
+  "description": "Standalone Express traffic logger — records every hit to /logging into Supabase",
   "scripts": {
+    "start": "node server.js",
     "setup-db": "node scripts/setup-db.js",
-    "test-log": "node scripts/test-log.js",
-    "test-dash": "node scripts/test-dash.js"
+    "test": "node scripts/test.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
-    "pg": "^8.13.0"
-  }
+    "express": "^4.21.0",
+    "pg": "^8.13.0",
+    "dotenv": "^16.4.7"
+  },
+  "main": "server.js"
 }
