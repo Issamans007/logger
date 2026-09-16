@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Octopus Traffic Monitor</title>
+<style>
+  :root{
+    --bg:#0b0f12; --panel:#141a1f; --panel-2:#1a2229; --rule:#242e36; --rule-hi:#33404a;
+    --ink:#e7ecef; --muted:#8b97a0; --faint:#5f6b74;
+    --accent:#4fbfaf; --accent-dim:#1c3a38;
+    --synthetic:#e0a53b; --synthetic-dim:#3a2f16;
+    --organic:#5cc98a; --organic-dim:#173226;
+    --danger:#e0785e;
+    --mono:ui-monospace,"Cascadia Code","JetBrains Mono",Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1200px;margin:0 auto;padding-inline:20px;padding-block:0 48px}
+
+  /* header */
+  header{position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg) 78%,transparent);
+    padding-block:18px 12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--rule);margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;letter-spacing:-.01em}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
+  .dot.live{background:var(--organic);box-shadow:0 0 0 0 var(--organic);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(92,201,138,.5)}70%{box-shadow:0 0 0 7px rgba(92,201,138,0)}100%{box-shadow:0 0 0 0 rgba(92,201,138,0)}}
+  @media (prefers-reduced-motion:reduce){.dot.live{animation:none}}
+  .brand small{color:var(--muted);font-weight:400;font-size:12.5px}
+  .controls{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .updated{color:var(--faint);font-size:12px;font-variant-numeric:tabular-nums}
+
+  button{font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--panel-2);
+    border:1px solid var(--rule-hi);border-radius:6px;padding:6px 11px;cursor:pointer;transition:border-color .15s,background .15s}
+  button:hover{border-color:var(--accent)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button.on{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+
+  /* stat tiles */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+  .tile{background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:14px 16px}
+  .tile .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+  .tile .num{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.02em}
+  .tile.syn{border-top:2px solid var(--synthetic)} .tile.syn .num{color:var(--synthetic)}
+  .tile.org{border-top:2px solid var(--organic)}   .tile.org .num{color:var(--organic)}
+  .tile .sub{font-size:12px;color:var(--faint);margin-top:6px}
+
+  /* filter row */
+  .filters{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .filters .seg{display:inline-flex;border:1px solid var(--rule-hi);border-radius:7px;overflow:hidden}
+  .filters .seg button{border:0;border-radius:0;border-right:1px solid var(--rule-hi)}
+  .filters .seg button:last-child{border-right:0}
+  .count{margin-left:auto;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+
+  /* table */
+  .tablewrap{border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--panel)}
+  .scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:820px;font-size:13px}
+  thead th{position:sticky;top:0;text-align:left;background:var(--panel-2);color:var(--muted);
+    font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    padding:10px 12px;border-bottom:1px solid var(--rule-hi);white-space:nowrap}
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--panel-2)}
+  .m{font-family:var(--mono);font-size:12px}
+  .time{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .ua{color:var(--muted);max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .path{color:var(--ink)}
+  .chip{display:inline-block;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;
+    padding:2px 7px;border-radius:4px;white-space:nowrap}
+  .chip.syn{background:var(--synthetic-dim);color:var(--synthetic)}
+  .chip.org{background:var(--organic-dim);color:var(--organic)}
+  .empty,.err{padding:40px 16px;text-align:center;color:var(--muted)}
+  .err{color:var(--danger)}
+
+  /* password gate */
+  .gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:20;padding:20px}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:28px;width:100%;max-width:360px}
+  .card h1{margin:0 0 4px;font-size:18px;letter-spacing:-.01em}
+  .card p{margin:0 0 18px;color:var(--muted);font-size:13px}
+  .card label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .card input{width:100%;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--panel-2);
+    border:1px solid var(--rule-hi);border-radius:7px;padding:10px 12px;margin-bottom:14px}
+  .card input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+  .card button{width:100%;background:var(--accent-dim);border-color:var(--accent);color:var(--accent);padding:10px;font-size:14px;font-weight:600}
+  .gate-err{color:var(--danger);font-size:12.5px;margin-top:10px;min-height:16px}
+</style>
+</head>
+<body>
+
+<!-- password gate -->
+<div class="gate" id="gate">
+  <form class="card" id="gateForm">
+    <h1>Octopus Traffic Monitor</h1>
+    <p>Enter the dashboard password to view live traffic.</p>
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password" autofocus>
+    <button type="submit">Open dashboard</button>
+    <div class="gate-err" id="gateErr"></div>
+  </form>
+</div>
+
+<!-- dashboard -->
+<div class="wrap" id="app" hidden>
+  <header>
+    <div class="brand">
+      <span class="dot" id="liveDot"></span>
+      Octopus Traffic Monitor
+      <small id="target"></small>
+    </div>
+    <div class="controls">
+      <span class="updated" id="updated"></span>
+      <button id="autoBtn" class="on">Auto-refresh: on</button>
+      <button id="refreshBtn">Refresh</button>
+      <button id="lockBtn" title="Forget password and lock">Lock</button>
+    </div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="filters">
+    <div class="seg" id="seg">
+      <button data-f="" class="on">All</button>
+      <button data-f="synthetic">Synthetic</button>
+      <button data-f="organic">Organic</button>
+    </div>
+    <span class="count" id="rowCount"></span>
+  </div>
+
+  <div class="tablewrap">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th><th>Type</th><th>IP</th><th>Country</th>
+            <th>Method</th><th>Path</th><th>User-Agent</th><th>QA id</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emptyState" hidden>No hits yet. Point traffic at this site and it will appear here.</div>
+    <div class="err" id="errState" hidden></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY="octopus_dash_key";
+  var key=null, filter="", auto=true, timer=null, poll=4000;
+
+  var $=function(id){return document.getElementById(id)};
+
+  function saveKey(k){ try{sessionStorage.setItem(KEY,k)}catch(e){} }
+  function loadKey(){ try{return sessionStorage.getItem(KEY)}catch(e){return null} }
+  function clearKey(){ try{sessionStorage.removeItem(KEY)}catch(e){} }
+
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+  function ago(iso){
+    var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
+    if(s<60)return Math.floor(s)+"s ago";
+    if(s<3600)return Math.floor(s/60)+"m ago";
+    if(s<86400)return Math.floor(s/3600)+"h ago";
+    return Math.floor(s/86400)+"d ago";
+  }
+  function clock(iso){var d=new Date(iso);return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}
+
+  async function fetchData(){
+    var url="/api/data?limit=150"+(filter?("&filter="+filter):"");
+    var res=await fetch(url,{headers:{"x-dash-key":key}});
+    if(res.status===401){throw {code:401}}
+    if(!res.ok){var j=await res.json().catch(function(){return{}});throw {code:res.status,msg:j.error||("HTTP "+res.status)}}
+    return res.json();
+  }
+
+  function renderStats(s){
+    var tiles=[
+      {label:"Total hits",num:s.total,cls:""},
+      {label:"Synthetic",num:s.synthetic,cls:"syn",sub:"tagged by generator"},
+      {label:"Organic",num:s.organic,cls:"org",sub:"no QA tag"},
+      {label:"Unique IPs",num:s.unique_ips,cls:""},
+      {label:"Last 5 min",num:s.last5m,cls:""},
+      {label:"Last hit",num:s.last_hit?ago(s.last_hit):"—",cls:"",sub:s.last_hit?clock(s.last_hit):""}
+    ];
+    $("stats").innerHTML=tiles.map(function(t){
+      return '<div class="tile '+t.cls+'"><div class="label">'+t.label+'</div>'+
+        '<div class="num">'+esc(t.num)+'</div>'+(t.sub?'<div class="sub">'+esc(t.sub)+'</div>':'')+'</div>';
+    }).join("");
+  }
+
+  function renderRows(rows){
+    $("rowCount").textContent=rows.length+" shown";
+    if(!rows.length){$("rows").innerHTML="";$("emptyState").hidden=false;return}
+    $("emptyState").hidden=true;
+    $("rows").innerHTML=rows.map(function(r){
+      var chip=r.is_synthetic?'<span class="chip syn">synthetic</span>':'<span class="chip org">organic</span>';
+      return "<tr>"+
+        '<td class="time" title="'+esc(r.received_at)+'">'+esc(ago(r.received_at))+"</td>"+
+        "<td>"+chip+"</td>"+
+        '<td class="m">'+esc(r.ip||"—")+"</td>"+
+        "<td>"+esc(r.geo_country||"—")+"</td>"+
+        '<td class="m">'+esc(r.method||"")+"</td>"+
+        '<td class="m path">'+esc(r.path||"")+"</td>"+
+        '<td class="ua" title="'+esc(r.ua||"")+'">'+esc(r.ua||"—")+"</td>"+
+        '<td class="m">'+esc(r.qa_test_id||"—")+"</td>"+
+      "</tr>";
+    }).join("");
+  }
+
+  async function tick(){
+    try{
+      var d=await fetchData();
+      $("errState").hidden=true;
+      renderStats(d.stats);
+      renderRows(d.rows);
+      $("updated").textContent="updated "+new Date().toLocaleTimeString();
+      $("liveDot").className="dot"+(auto?" live":"");
+    }catch(e){
+      if(e.code===401){lock("Session expired. Enter the password again.");return}
+      $("errState").hidden=false;
+      $("errState").textContent="Error: "+(e.msg||"could not reach the server");
+    }
+  }
+
+  function schedule(){
+    if(timer)clearInterval(timer);
+    if(auto)timer=setInterval(function(){if(!document.hidden)tick()},poll);
+  }
+
+  function start(){
+    $("gate").hidden=true;$("app").hidden=false;
+    tick();schedule();
+  }
+  function lock(msg){
+    clearKey();key=null;
+    if(timer)clearInterval(timer);
+    $("app").hidden=true;$("gate").hidden=false;
+    $("gateErr").textContent=msg||"";
+    $("pw").value="";$("pw").focus();
+  }
+
+  // gate submit
+  $("gateForm").addEventListener("submit",async function(ev){
+    ev.preventDefault();
+    key=$("pw").value;
+    $("gateErr").textContent="Checking…";
+    try{ await fetchData(); saveKey(key); $("gateErr").textContent=""; start(); }
+    catch(e){ if(e.code===401){$("gateErr").textContent="Wrong password."}
+      else{$("gateErr").textContent=e.msg||"Could not connect."} }
+  });
+
+  // controls
+  $("refreshBtn").addEventListener("click",tick);
+  $("autoBtn").addEventListener("click",function(){
+    auto=!auto;this.textContent="Auto-refresh: "+(auto?"on":"off");this.className=auto?"on":"";
+    $("liveDot").className="dot"+(auto?" live":"");schedule();
+  });
+  $("lockBtn").addEventListener("click",function(){lock("")});
+  $("seg").addEventListener("click",function(ev){
+    var b=ev.target.closest("button");if(!b)return;
+    filter=b.getAttribute("data-f")||"";
+    [].forEach.call(this.children,function(c){c.className=c===b?"on":""});
+    tick();
+  });
+
+  // boot: reuse a saved password if present
+  key=loadKey();
+  if(key){ fetchData().then(function(){start()}).catch(function(){lock("")}); }
+})();
+</script>
+</body>
+</html>

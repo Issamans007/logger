@@ -1,4 +1,3 @@
-# Send EVERY request, on every path, to the logger function.
 [build]
   functions = "netlify/functions"
   publish   = "public"
@@ -6,8 +5,24 @@
 [functions]
   node_bundler = "esbuild"
 
+# Order matters: first match wins. The dashboard and its data API are carved
+# out BEFORE the catch-all, so they are never sent to the logger.
+
+# 1. the dashboard UI (password-gated in the page itself)
 [[redirects]]
-  from   = "/*"
-  to     = "/.netlify/functions/log"
+  from = "/dashboard"
+  to = "/dash.html"
   status = 200
-  force  = true
+
+# 2. the protected data API the dashboard reads from
+[[redirects]]
+  from = "/api/data"
+  to = "/.netlify/functions/data"
+  status = 200
+
+# 3. everything else on the site is logged
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/log"
+  status = 200
+  force = true
