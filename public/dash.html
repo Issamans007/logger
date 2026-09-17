@@ -16,6 +16,7 @@
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   *{box-sizing:border-box}
+  [hidden]{display:none !important}  /* beats .gate's display:flex so the login overlay actually hides */
   html,body{margin:0;height:100%}
   body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased}
   .wrap{max-width:1200px;margin:0 auto;padding-inline:20px;padding-block:0 48px}
