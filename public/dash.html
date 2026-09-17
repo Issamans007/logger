@@ -46,6 +46,7 @@
   .tile.syn{border-top:2px solid var(--synthetic)} .tile.syn .num{color:var(--synthetic)}
   .tile.org{border-top:2px solid var(--organic)}   .tile.org .num{color:var(--organic)}
   .tile.lab{border-top:2px solid var(--accent)}    .tile.lab .num{color:var(--accent)}
+  .tile.dc{border-top:2px solid var(--danger)}     .tile.dc .num{color:var(--danger)}
   .tile .sub{font-size:12px;color:var(--faint);margin-top:6px}
 
   .filters{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
@@ -83,6 +84,10 @@
   .chip{display:inline-block;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:4px;white-space:nowrap}
   .chip.syn{background:var(--synthetic-dim);color:var(--synthetic)}
   .chip.org{background:var(--organic-dim);color:var(--organic)}
+  .chip.dc{background:var(--danger-dim);color:var(--danger)}
+  .chip.px{background:var(--synthetic-dim);color:var(--synthetic)}
+  .chip.mo{background:#152a38;color:#6bb6e0}
+  .chip.res{background:var(--organic-dim);color:var(--organic)}
   .lchip{display:inline-block;font-size:11px;padding:2px 7px;border-radius:4px;background:var(--accent-dim);color:var(--accent);white-space:nowrap}
   .empty,.err{padding:40px 16px;text-align:center;color:var(--muted)}
   .err{color:var(--danger)}
@@ -149,7 +154,8 @@
       <button data-f="synthetic">Synthetic</button>
       <button data-f="organic">Organic</button>
       <button data-f="labeled">Labeled</button>
-      <button data-f="unlabeled">Unlabeled</button>
+      <button data-f="datacenter">Datacenter</button>
+      <button data-f="proxy">Proxy</button>
     </div>
     <span class="spacer"></span>
     <button id="exportCsv">Export CSV</button>
@@ -208,6 +214,21 @@
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
   var regionNames=null; try{regionNames=new Intl.DisplayNames(["en"],{type:"region"})}catch(e){}
   function countryName(code){if(!code)return"—";try{var n=regionNames&&regionNames.of(code);return n&&n!==code?(n+" ("+code+")"):code}catch(e){return code}}
+  // network classification label for a row
+  function netLabel(r){
+    if(r.is_datacenter) return "DATACENTER / hosting"+(r.is_proxy?" · proxy":"");
+    if(r.is_proxy) return "PROXY / VPN";
+    if(r.is_mobile) return "mobile carrier";
+    if(r.geo_asn) return "residential";
+    return "— (not enriched yet)";
+  }
+  function netChip(r){
+    if(r.is_datacenter) return '<span class="chip dc">datacenter</span>';
+    if(r.is_proxy) return '<span class="chip px">proxy</span>';
+    if(r.is_mobile) return '<span class="chip mo">mobile</span>';
+    if(r.geo_asn) return '<span class="chip res">residential</span>';
+    return "";
+  }
   function ago(iso){var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
     if(s<60)return Math.floor(s)+"s ago";if(s<3600)return Math.floor(s/60)+"m ago";
     if(s<86400)return Math.floor(s/3600)+"h ago";return Math.floor(s/86400)+"d ago"}
@@ -229,6 +250,7 @@
       {label:"Synthetic",num:s.synthetic,cls:"syn",sub:"tagged by generator"},
       {label:"Organic",num:s.organic,cls:"org",sub:"no QA tag"},
       {label:"Labeled",num:s.labeled,cls:"lab",sub:"tagged by you"},
+      {label:"Datacenter",num:s.datacenter==null?"—":s.datacenter,cls:"dc",sub:(s.proxy!=null?(s.proxy+" proxy"):"")+(s.pending_enrich?("  ·  "+s.pending_enrich+" pending"):"")},
       {label:"Unique IPs",num:s.unique_ips,cls:""},
       {label:"Last hit",num:s.last_hit?ago(s.last_hit):"—",cls:"",sub:s.last_hit?clock(s.last_hit):""}
     ];
@@ -249,7 +271,8 @@
         '<td class="chk"><input type="checkbox" class="rowchk" data-id="'+id+'"'+(on?" checked":"")+'></td>'+
         '<td class="time" title="'+esc(r.received_at)+'">'+esc(ago(r.received_at))+"</td>"+
         "<td>"+chip+"</td><td>"+lab+"</td>"+
-        '<td class="m">'+esc(r.ip||"—")+'</td><td class="country">'+esc(r.geo_country||"—")+"</td>"+
+        '<td class="m">'+esc(r.ip||"—")+"</td>"+
+        '<td class="country">'+esc(r.geo_country||"—")+" "+netChip(r)+"</td>"+
         '<td class="m">'+esc(r.method||"")+'</td><td class="m">'+esc(r.path||"")+"</td>"+
         '<td class="ua" title="'+esc(r.ua||"")+'">'+esc(r.ua||"—")+"</td>"+
         '<td class="m">'+esc(r.qa_test_id||"—")+"</td></tr>"}).join("");
@@ -292,8 +315,10 @@
       ["Time", new Date(r.received_at).toLocaleString()+" · "+ago(r.received_at)],
       ["Type", r.is_synthetic?"synthetic (from generator)":"organic (real visitor)"],
       ["Label", r.label?(esc(r.label)+(r.note?(" — "+esc(r.note)):"")):"—"],
-      ["Country", esc(countryName(r.geo_country))],
+      ["Country", esc(countryName(r.geo_country))+(r.geo_city?(" · "+esc(r.geo_city)):"")],
       ["IP", esc(r.ip||"—"), "mono"],
+      ["Network", netLabel(r)],
+      ["ASN / ISP", (r.geo_asn?("AS"+r.geo_asn+" "):"")+esc(r.geo_org||"—")],
       ["Forwarded-for", esc(r.ip_chain||"—"), "mono"],
       ["Method / Path", esc((r.method||"")+"  "+(r.path||"")), "mono"],
       ["Query", esc(r.query||"—"), "mono"],

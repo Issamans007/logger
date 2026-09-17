@@ -77,6 +77,9 @@ function filterClause(filter) {
   if (filter === "organic") return "where is_synthetic = false";
   if (filter === "labeled") return "where label is not null";
   if (filter === "unlabeled") return "where label is null";
+  if (filter === "datacenter") return "where is_datacenter = true";
+  if (filter === "proxy") return "where is_proxy = true";
+  if (filter === "mobile") return "where is_mobile = true";
   return "";
 }
 
@@ -195,6 +198,9 @@ app.get("/api/data", async (req, res) => {
          count(*) filter (where is_synthetic)::int as synthetic,
          count(*) filter (where not is_synthetic)::int as organic,
          count(*) filter (where label is not null)::int as labeled,
+         count(*) filter (where is_datacenter)::int as datacenter,
+         count(*) filter (where is_proxy)::int as proxy,
+         count(*) filter (where enriched_at is null)::int as pending_enrich,
          count(distinct ip)::int as unique_ips,
          count(*) filter (where received_at > now() - interval '5 minutes')::int as last5m,
          max(received_at) as last_hit
@@ -204,7 +210,8 @@ app.get("/api/data", async (req, res) => {
     const rows = (await pool.query(
       `select id, received_at, is_synthetic, host(ip) as ip, ip_chain, geo_country, geo_org,
               method, path, query, user_agent as ua, accept_language, referer,
-              sec_ch_ua_platform, qa_test_id, label, note, fp, ja3, header_order
+              sec_ch_ua_platform, qa_test_id, label, note, fp, ja3, header_order,
+              geo_asn, geo_org, geo_region, geo_city, is_datacenter, is_proxy, is_mobile
        from public.hits ${where}
        order by received_at desc limit $1`,
       [limit]

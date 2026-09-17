@@ -32,9 +32,12 @@ create table if not exists public.hits (
   geo_country   text,
   geo_region    text,
   geo_city      text,
-  geo_asn       integer,       -- filled later: IP -> ASN enrichment
+  geo_asn       integer,       -- filled by enrich.js: IP -> ASN
   geo_org       text,          -- ASN owner / ISP name
-  is_datacenter boolean,       -- filled later: the signal that actually matters
+  is_datacenter boolean,       -- hosting/datacenter range — the signal that matters most
+  is_proxy      boolean,       -- proxy / VPN / Tor indicator
+  is_mobile     boolean,       -- mobile carrier network
+  enriched_at   timestamptz,   -- when enrich.js last looked this IP up (null = pending)
 
   -- client identity signals (L7) ------------------------------------------
   user_agent          text,
