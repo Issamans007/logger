@@ -49,8 +49,10 @@ function pick(headers, name) {
 }
 function clientIp(req) {
   const xff = req.headers["x-forwarded-for"];
-  if (xff) return xff.split(",")[0].trim();
-  return req.ip || null;
+  let ip = xff ? xff.split(",")[0].trim() : (req.ip || null);
+  // Node reports direct IPv4 clients as IPv4-mapped IPv6 (::ffff:1.2.3.4)
+  if (ip && ip.startsWith("::ffff:")) ip = ip.slice(7);
+  return ip;
 }
 function safeEqual(a, b) {
   const ba = Buffer.from(String(a || ""), "utf8");
