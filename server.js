@@ -81,6 +81,13 @@ function filterClause(filter) {
 // -- 1. the logger ---------------------------------------------------------
 async function logHit(req, res) {
   const H = req.headers;
+  // header order — preserved by Node's rawHeaders when we terminate TLS
+  // ourselves (no proxy in front re-serialising them). This is the signal
+  // Render/Netlify could never give us.
+  const order = [];
+  const raw = req.rawHeaders || [];
+  for (let i = 0; i < raw.length; i += 2) order.push(raw[i]);
+
   const row = {
     method: req.method,
     host: pick(H, "host"),
@@ -88,6 +95,8 @@ async function logHit(req, res) {
     query: req.originalUrl.includes("?") ? req.originalUrl.split("?")[1] : null,
     ip: clientIp(req),
     ip_chain: pick(H, "x-forwarded-for"),
+    header_order: order,
+    ja3: pick(H, "x-ja3") || pick(H, "x-ja3-hash"),   // filled by a JA3 front, if present
     geo_country: pick(H, "cf-ipcountry") || pick(H, "x-country") || pick(H, "fly-region"),
     user_agent: pick(H, "user-agent"),
     accept_language: pick(H, "accept-language"),
@@ -175,7 +184,7 @@ app.get("/api/data", async (req, res) => {
     const rows = (await pool.query(
       `select id, received_at, is_synthetic, host(ip) as ip, ip_chain, geo_country, geo_org,
               method, path, query, user_agent as ua, accept_language, referer,
-              sec_ch_ua_platform, qa_test_id, label, note, fp
+              sec_ch_ua_platform, qa_test_id, label, note, fp, ja3, header_order
        from public.hits ${where}
        order by received_at desc limit $1`,
       [limit]
@@ -265,11 +274,27 @@ app.use((_req, res) => res.status(404).type("txt").send("not found"));
 
 // -- start (unless imported by a test) -------------------------------------
 if (require.main === module) {
-  const server = app.listen(PORT, () => {
-    console.log(`octopus logger listening on :${PORT}`);
-    console.log(`  log endpoint : /logging`);
-    console.log(`  dashboard    : /dashboard`);
-  });
+  const fs = require("fs");
+  const http = require("http");
+  const https = require("https");
+  const certPath = process.env.TLS_CERT, keyPath = process.env.TLS_KEY;
+
+  let server;
+  if (certPath && keyPath && fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+    // We terminate TLS ourselves -> req.rawHeaders keeps the real header order.
+    server = https.createServer({ cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) }, app)
+      .listen(PORT, () => console.log(`octopus logger HTTPS on :${PORT}`));
+    // plain HTTP on 80 just redirects to HTTPS
+    const httpPort = Number(process.env.HTTP_PORT || 80);
+    http.createServer((req, res) => {
+      res.writeHead(301, { Location: "https://" + (req.headers.host || "").replace(/:\d+$/, "") + req.url });
+      res.end();
+    }).listen(httpPort, () => console.log(`HTTP redirect on :${httpPort}`));
+  } else {
+    server = app.listen(PORT, () => console.log(`octopus logger HTTP on :${PORT}`));
+  }
+  console.log(`  log endpoint : /logging   dashboard : /dashboard`);
+
   const shutdown = () => { server.close(() => pool.end().then(() => process.exit(0))); };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);

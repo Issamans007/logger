@@ -301,6 +301,8 @@
       ["Language", esc(r.accept_language||"—")],
       ["Referer", esc(r.referer||"—"), "mono"],
       ["QA id", esc(r.qa_test_id||"—"), "mono"],
+      ["JA3 / TLS", esc(r.ja3||"— (needs the JA3 front)"), "mono"],
+      ["Header order", esc((r.header_order&&r.header_order.length)?r.header_order.join(", "):"—"), "mono"],
       ["User-Agent", esc(r.ua||"—"), "mono"]
     ];
     var dl=pairs.map(function(p){return "<dt>"+p[0]+"</dt><dd"+(p[2]?' class="'+p[2]+'"':"")+">"+p[1]+"</dd>"}).join("");
