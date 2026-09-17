@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"github.com/dreadl0ck/ja3"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/pcap"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/pcap"
 )
 
 type entry struct {
