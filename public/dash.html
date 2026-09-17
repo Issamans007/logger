@@ -99,6 +99,22 @@
   .gate-err{color:var(--danger);font-size:12.5px;margin-top:10px;min-height:16px}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel-2);
     border:1px solid var(--accent);color:var(--ink);padding:10px 16px;border-radius:8px;z-index:30;font-size:13px}
+
+  tbody tr{cursor:pointer}
+  td.country,td.ua{cursor:pointer}
+  td.country:hover,td.ua:hover{color:var(--accent)}
+
+  /* detail popup */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:25;padding:20px}
+  .modal-card{background:var(--panel);border:1px solid var(--rule-hi);border-radius:12px;
+    width:100%;max-width:560px;max-height:85vh;overflow:auto;padding:22px}
+  .modal-card h2{margin:0 0 16px;font-size:16px;display:flex;align-items:center;gap:10px}
+  .modal-card .x{margin-left:auto;background:var(--panel-2);border:1px solid var(--rule-hi);border-radius:6px;
+    width:28px;height:28px;padding:0;font-size:16px;line-height:1;color:var(--muted);cursor:pointer}
+  .dl{display:grid;grid-template-columns:130px 1fr;gap:8px 14px;font-size:13px}
+  .dl dt{color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.06em;padding-top:2px}
+  .dl dd{margin:0;word-break:break-word}
+  .dl dd.mono{font-family:var(--mono);font-size:12.5px;background:var(--panel-2);border:1px solid var(--rule);border-radius:6px;padding:8px 10px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -176,6 +192,7 @@
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div class="modal" id="modal" hidden><div class="modal-card" id="modalCard"></div></div>
 
 <script>
 (function(){
@@ -189,6 +206,8 @@
   function loadKey(){try{return sessionStorage.getItem(KEY)}catch(e){return null}}
   function clearKey(){try{sessionStorage.removeItem(KEY)}catch(e){}}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+  var regionNames=null; try{regionNames=new Intl.DisplayNames(["en"],{type:"region"})}catch(e){}
+  function countryName(code){if(!code)return"—";try{var n=regionNames&&regionNames.of(code);return n&&n!==code?(n+" ("+code+")"):code}catch(e){return code}}
   function ago(iso){var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
     if(s<60)return Math.floor(s)+"s ago";if(s<3600)return Math.floor(s/60)+"m ago";
     if(s<86400)return Math.floor(s/3600)+"h ago";return Math.floor(s/86400)+"d ago"}
@@ -230,7 +249,7 @@
         '<td class="chk"><input type="checkbox" class="rowchk" data-id="'+id+'"'+(on?" checked":"")+'></td>'+
         '<td class="time" title="'+esc(r.received_at)+'">'+esc(ago(r.received_at))+"</td>"+
         "<td>"+chip+"</td><td>"+lab+"</td>"+
-        '<td class="m">'+esc(r.ip||"—")+"</td><td>"+esc(r.geo_country||"—")+"</td>"+
+        '<td class="m">'+esc(r.ip||"—")+'</td><td class="country">'+esc(r.geo_country||"—")+"</td>"+
         '<td class="m">'+esc(r.method||"")+'</td><td class="m">'+esc(r.path||"")+"</td>"+
         '<td class="ua" title="'+esc(r.ua||"")+'">'+esc(r.ua||"—")+"</td>"+
         '<td class="m">'+esc(r.qa_test_id||"—")+"</td></tr>"}).join("");
@@ -264,6 +283,39 @@
   function start(){$("gate").hidden=true;$("app").hidden=false;tick();schedule()}
   function lock(msg){clearKey();key=null;if(timer)clearInterval(timer);
     $("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("pw").value="";$("pw").focus()}
+
+  /* ---- detail popup (click a row to see full country + user-agent) ---- */
+  function rowById(id){for(var i=0;i<lastRows.length;i++)if(String(lastRows[i].id)===String(id))return lastRows[i];return null}
+  function openDetail(r){
+    if(!r)return;
+    var pairs=[
+      ["Time", new Date(r.received_at).toLocaleString()+" · "+ago(r.received_at)],
+      ["Type", r.is_synthetic?"synthetic (from generator)":"organic (real visitor)"],
+      ["Label", r.label?(esc(r.label)+(r.note?(" — "+esc(r.note)):"")):"—"],
+      ["Country", esc(countryName(r.geo_country))],
+      ["IP", esc(r.ip||"—"), "mono"],
+      ["Forwarded-for", esc(r.ip_chain||"—"), "mono"],
+      ["Method / Path", esc((r.method||"")+"  "+(r.path||"")), "mono"],
+      ["Query", esc(r.query||"—"), "mono"],
+      ["Platform", esc(r.sec_ch_ua_platform||"—")],
+      ["Language", esc(r.accept_language||"—")],
+      ["Referer", esc(r.referer||"—"), "mono"],
+      ["QA id", esc(r.qa_test_id||"—"), "mono"],
+      ["User-Agent", esc(r.ua||"—"), "mono"]
+    ];
+    var dl=pairs.map(function(p){return "<dt>"+p[0]+"</dt><dd"+(p[2]?' class="'+p[2]+'"':"")+">"+p[1]+"</dd>"}).join("");
+    $("modalCard").innerHTML='<h2>Request detail <button class="x" id="modalX" title="Close">&times;</button></h2><dl class="dl">'+dl+"</dl>";
+    $("modal").hidden=false;
+    $("modalX").addEventListener("click",closeDetail);
+  }
+  function closeDetail(){$("modal").hidden=true}
+  $("modal").addEventListener("click",function(ev){if(ev.target===this)closeDetail()});
+  document.addEventListener("keydown",function(ev){if(ev.key==="Escape")closeDetail()});
+  $("rows").addEventListener("click",function(ev){
+    if(ev.target.closest("input"))return;           // let checkboxes work
+    var tr=ev.target.closest("tr");if(!tr)return;
+    openDetail(rowById(tr.getAttribute("data-id")));
+  });
 
   /* ---- selection ---- */
   $("rows").addEventListener("change",function(ev){

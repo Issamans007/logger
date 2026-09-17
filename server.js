@@ -143,8 +143,9 @@ app.get("/api/data", async (req, res) => {
     )).rows[0];
 
     const rows = (await pool.query(
-      `select id, received_at, is_synthetic, host(ip) as ip, geo_country, geo_org,
-              method, path, left(user_agent,90) as ua, qa_test_id, label, note
+      `select id, received_at, is_synthetic, host(ip) as ip, ip_chain, geo_country, geo_org,
+              method, path, query, user_agent as ua, accept_language, referer,
+              sec_ch_ua_platform, qa_test_id, label, note
        from public.hits ${where}
        order by received_at desc limit $1`,
       [limit]
