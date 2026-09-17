@@ -81,6 +81,24 @@ function filterClause(filter) {
 }
 
 // -- 1. the logger ---------------------------------------------------------
+// Ask the local ja3sniffer for the JA3 of this connection, matched by the
+// client's ip:port (unique per TCP connection). Returns null if unavailable.
+async function lookupJa3(req) {
+  if (!process.env.JA3_URL) return null;
+  const ip = (req.socket && req.socket.remoteAddress || "").replace("::ffff:", "");
+  const port = req.socket && req.socket.remotePort;
+  if (!ip || !port) return null;
+  try {
+    const r = await fetch(process.env.JA3_URL + "?k=" + encodeURIComponent(ip + ":" + port),
+      { signal: AbortSignal.timeout(400) });
+    if (!r.ok) return null;
+    const t = (await r.text()).trim();
+    return t || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 async function logHit(req, res) {
   const H = req.headers;
   // header order — preserved by Node's rawHeaders when we terminate TLS
@@ -98,7 +116,7 @@ async function logHit(req, res) {
     ip: clientIp(req),
     ip_chain: pick(H, "x-forwarded-for"),
     header_order: order,
-    ja3: pick(H, "x-ja3") || pick(H, "x-ja3-hash"),   // filled by a JA3 front, if present
+    ja3: pick(H, "x-ja3") || pick(H, "x-ja3-hash") || (await lookupJa3(req)),
     geo_country: pick(H, "cf-ipcountry") || pick(H, "x-country") || pick(H, "fly-region"),
     user_agent: pick(H, "user-agent"),
     accept_language: pick(H, "accept-language"),
