@@ -56,6 +56,10 @@ create table if not exists public.hits (
   -- the join key the octopus generator sends; null for organic traffic ----
   qa_test_id    text,
 
+  -- manual labelling from the dashboard (bot / benign / attack / …) --------
+  label         text,
+  note          text,
+
   -- everything else, verbatim ---------------------------------------------
   headers       jsonb,
 
@@ -68,6 +72,7 @@ create index if not exists hits_received_at_idx on public.hits (received_at desc
 create index if not exists hits_ip_idx          on public.hits (ip);
 create index if not exists hits_qa_idx          on public.hits (qa_test_id) where qa_test_id is not null;
 create index if not exists hits_synthetic_idx   on public.hits (is_synthetic, received_at desc);
+create index if not exists hits_label_idx        on public.hits (label) where label is not null;
 
 -- ---------------------------------------------------------------------------
 -- Security: RLS ON, and deliberately NO policies.

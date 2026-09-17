@@ -41,6 +41,7 @@ const app = express();
 // Behind Railway/Fly/Render/etc the real client IP is in x-forwarded-for.
 app.set("trust proxy", true);
 app.disable("x-powered-by");
+app.use(express.json({ limit: "256kb" })); // for the dashboard's POST bodies
 
 // -- helpers ---------------------------------------------------------------
 function pick(headers, name) {
@@ -56,6 +57,25 @@ function safeEqual(a, b) {
   const bb = Buffer.from(String(b || ""), "utf8");
   if (ba.length !== bb.length) return false;
   return crypto.timingSafeEqual(ba, bb);
+}
+
+// Gate for every /api/* route. Returns true if the caller is allowed; otherwise
+// it has already sent the 401/500 and the caller must stop.
+function authed(req, res) {
+  const expected = process.env.DASHBOARD_PASSWORD;
+  if (!expected) { res.status(500).json({ error: "DASHBOARD_PASSWORD not set on the server" }); return false; }
+  const key = req.headers["x-dash-key"] || req.query.key;
+  if (!safeEqual(key, expected)) { res.status(401).json({ error: "wrong password" }); return false; }
+  return true;
+}
+
+// Build a WHERE clause from a filter name. Returns "" for none.
+function filterClause(filter) {
+  if (filter === "synthetic") return "where is_synthetic = true";
+  if (filter === "organic") return "where is_synthetic = false";
+  if (filter === "labeled") return "where label is not null";
+  if (filter === "unlabeled") return "where label is null";
+  return "";
 }
 
 // -- 1. the logger ---------------------------------------------------------
@@ -105,17 +125,9 @@ app.get("/dashboard", (_req, res) => res.sendFile(path.join(PUBLIC, "dash.html")
 
 // -- 3. the protected data feed --------------------------------------------
 app.get("/api/data", async (req, res) => {
-  const expected = process.env.DASHBOARD_PASSWORD;
-  if (!expected) return res.status(500).json({ error: "DASHBOARD_PASSWORD not set on the server" });
-
-  const key = req.headers["x-dash-key"] || req.query.key;
-  if (!safeEqual(key, expected)) return res.status(401).json({ error: "wrong password" });
-
+  if (!authed(req, res)) return;
   const limit = Math.min(500, Math.max(1, parseInt(req.query.limit || "100", 10)));
-  const filter = req.query.filter;
-  let where = "";
-  if (filter === "synthetic") where = "where is_synthetic = true";
-  else if (filter === "organic") where = "where is_synthetic = false";
+  const where = filterClause(req.query.filter);
 
   try {
     const stats = (await pool.query(
@@ -123,6 +135,7 @@ app.get("/api/data", async (req, res) => {
          count(*)::int as total,
          count(*) filter (where is_synthetic)::int as synthetic,
          count(*) filter (where not is_synthetic)::int as organic,
+         count(*) filter (where label is not null)::int as labeled,
          count(distinct ip)::int as unique_ips,
          count(*) filter (where received_at > now() - interval '5 minutes')::int as last5m,
          max(received_at) as last_hit
@@ -131,13 +144,85 @@ app.get("/api/data", async (req, res) => {
 
     const rows = (await pool.query(
       `select id, received_at, is_synthetic, host(ip) as ip, geo_country, geo_org,
-              method, path, left(user_agent,90) as ua, qa_test_id
+              method, path, left(user_agent,90) as ua, qa_test_id, label, note
        from public.hits ${where}
        order by received_at desc limit $1`,
       [limit]
     )).rows;
 
     res.set("cache-control", "no-store").json({ stats, rows, serverTime: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// -- 3b. bulk DELETE -------------------------------------------------------
+// body: { ids: [1,2,3] }  OR  { all: true, filter: "organic" } to clear a view
+app.post("/api/delete", async (req, res) => {
+  if (!authed(req, res)) return;
+  const { ids, all, filter } = req.body || {};
+  try {
+    let result;
+    if (Array.isArray(ids) && ids.length) {
+      result = await pool.query("delete from public.hits where id = any($1::bigint[])", [ids]);
+    } else if (all) {
+      const where = filterClause(filter);
+      result = await pool.query(`delete from public.hits ${where}`);
+    } else {
+      return res.status(400).json({ error: "pass ids:[...] or all:true" });
+    }
+    res.json({ deleted: result.rowCount });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// -- 3c. bulk LABEL / note update ------------------------------------------
+// body: { ids: [..], label: "bot", note: "optional" }  (label:null clears it)
+app.post("/api/label", async (req, res) => {
+  if (!authed(req, res)) return;
+  const { ids, label, note } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: "pass ids:[...]" });
+  try {
+    const sets = ["label = $2"];
+    const params = [ids, label == null || label === "" ? null : String(label).slice(0, 60)];
+    if (note !== undefined) { sets.push("note = $3"); params.push(note ? String(note).slice(0, 500) : null); }
+    const result = await pool.query(
+      `update public.hits set ${sets.join(", ")} where id = any($1::bigint[])`, params
+    );
+    res.json({ updated: result.rowCount });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// -- 3d. EXPORT (full dataset, or filtered) as CSV or JSON -----------------
+app.get("/api/export", async (req, res) => {
+  if (!authed(req, res)) return;
+  const format = req.query.format === "json" ? "json" : "csv";
+  const where = filterClause(req.query.filter);
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  try {
+    const rows = (await pool.query(
+      `select id, received_at, is_synthetic, label, note, host(ip) as ip, ip_chain,
+              geo_country, geo_asn, geo_org, method, path, query, user_agent,
+              accept_language, referer, sec_ch_ua, sec_ch_ua_mobile, sec_ch_ua_platform,
+              sec_fetch_site, qa_test_id
+       from public.hits ${where} order by received_at desc`
+    )).rows;
+
+    if (format === "json") {
+      res.set("content-disposition", `attachment; filename="hits-${stamp}.json"`)
+         .type("application/json").send(JSON.stringify(rows, null, 2));
+      return;
+    }
+    // CSV
+    const cols = rows.length ? Object.keys(rows[0]) : ["id"];
+    const esc = (v) => '"' + String(v == null ? "" : v).split('"').join('""') + '"';
+    const lines = [cols.join(",")];
+    for (const r of rows) lines.push(cols.map((c) => esc(r[c])).join(","));
+    res.set("content-disposition", `attachment; filename="hits-${stamp}.csv"`)
+       .type("text/csv").send(lines.join("\n"));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

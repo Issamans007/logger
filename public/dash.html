@@ -11,25 +11,23 @@
     --accent:#4fbfaf; --accent-dim:#1c3a38;
     --synthetic:#e0a53b; --synthetic-dim:#3a2f16;
     --organic:#5cc98a; --organic-dim:#173226;
-    --danger:#e0785e;
+    --danger:#e0785e; --danger-dim:#3a1c15;
     --mono:ui-monospace,"Cascadia Code","JetBrains Mono",Consolas,monospace;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   *{box-sizing:border-box}
-  [hidden]{display:none !important}  /* beats .gate's display:flex so the login overlay actually hides */
+  [hidden]{display:none !important}
   html,body{margin:0;height:100%}
   body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1200px;margin:0 auto;padding-inline:20px;padding-block:0 48px}
+  .wrap{max-width:1280px;margin:0 auto;padding-inline:20px;padding-block:0 48px}
 
-  /* header */
   header{position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg) 78%,transparent);
     padding-block:18px 12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--rule);margin-bottom:20px}
   .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;letter-spacing:-.01em}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
-  .dot.live{background:var(--organic);box-shadow:0 0 0 0 var(--organic);animation:pulse 2.4s infinite}
+  .dot.live{background:var(--organic);animation:pulse 2.4s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(92,201,138,.5)}70%{box-shadow:0 0 0 7px rgba(92,201,138,0)}100%{box-shadow:0 0 0 0 rgba(92,201,138,0)}}
   @media (prefers-reduced-motion:reduce){.dot.live{animation:none}}
-  .brand small{color:var(--muted);font-weight:400;font-size:12.5px}
   .controls{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .updated{color:var(--faint);font-size:12px;font-variant-numeric:tabular-nums}
 
@@ -38,45 +36,57 @@
   button:hover{border-color:var(--accent)}
   button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   button.on{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+  button.danger{color:var(--danger);border-color:var(--danger)} button.danger:hover{background:var(--danger-dim)}
+  button:disabled{opacity:.4;cursor:not-allowed}
 
-  /* stat tiles */
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
   .tile{background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:14px 16px}
   .tile .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
-  .tile .num{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.02em}
+  .tile .num{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.02em}
   .tile.syn{border-top:2px solid var(--synthetic)} .tile.syn .num{color:var(--synthetic)}
   .tile.org{border-top:2px solid var(--organic)}   .tile.org .num{color:var(--organic)}
+  .tile.lab{border-top:2px solid var(--accent)}    .tile.lab .num{color:var(--accent)}
   .tile .sub{font-size:12px;color:var(--faint);margin-top:6px}
 
-  /* filter row */
   .filters{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-  .filters .seg{display:inline-flex;border:1px solid var(--rule-hi);border-radius:7px;overflow:hidden}
-  .filters .seg button{border:0;border-radius:0;border-right:1px solid var(--rule-hi)}
-  .filters .seg button:last-child{border-right:0}
-  .count{margin-left:auto;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .seg{display:inline-flex;border:1px solid var(--rule-hi);border-radius:7px;overflow:hidden}
+  .seg button{border:0;border-radius:0;border-right:1px solid var(--rule-hi)}
+  .seg button:last-child{border-right:0}
+  .spacer{margin-left:auto}
+  .count{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
 
-  /* table */
+  /* bulk toolbar */
+  .bulkbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel);
+    border:1px solid var(--accent);border-radius:9px;padding:10px 12px;margin-bottom:12px}
+  .bulkbar .selcount{font-weight:600;color:var(--accent)}
+  .bulkbar .sep{width:1px;align-self:stretch;background:var(--rule-hi);margin:0 2px}
+  .bulkbar input{font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--panel-2);
+    border:1px solid var(--rule-hi);border-radius:6px;padding:6px 9px;width:130px}
+  .bulkbar input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .lab-preset{background:var(--panel-2)}
+
   .tablewrap{border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--panel)}
   .scroll{overflow-x:auto}
-  table{border-collapse:collapse;width:100%;min-width:820px;font-size:13px}
+  table{border-collapse:collapse;width:100%;min-width:920px;font-size:13px}
   thead th{position:sticky;top:0;text-align:left;background:var(--panel-2);color:var(--muted);
     font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
     padding:10px 12px;border-bottom:1px solid var(--rule-hi);white-space:nowrap}
   tbody td{padding:9px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
   tbody tr:last-child td{border-bottom:0}
   tbody tr:hover{background:var(--panel-2)}
+  tbody tr.sel{background:var(--accent-dim)}
+  .chk{width:34px;text-align:center}
+  input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
   .m{font-family:var(--mono);font-size:12px}
   .time{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
-  .ua{color:var(--muted);max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .path{color:var(--ink)}
-  .chip{display:inline-block;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;
-    padding:2px 7px;border-radius:4px;white-space:nowrap}
+  .ua{color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip{display:inline-block;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:4px;white-space:nowrap}
   .chip.syn{background:var(--synthetic-dim);color:var(--synthetic)}
   .chip.org{background:var(--organic-dim);color:var(--organic)}
+  .lchip{display:inline-block;font-size:11px;padding:2px 7px;border-radius:4px;background:var(--accent-dim);color:var(--accent);white-space:nowrap}
   .empty,.err{padding:40px 16px;text-align:center;color:var(--muted)}
   .err{color:var(--danger)}
 
-  /* password gate */
   .gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:20;padding:20px}
   .card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:28px;width:100%;max-width:360px}
   .card h1{margin:0 0 4px;font-size:18px;letter-spacing:-.01em}
@@ -87,11 +97,12 @@
   .card input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
   .card button{width:100%;background:var(--accent-dim);border-color:var(--accent);color:var(--accent);padding:10px;font-size:14px;font-weight:600}
   .gate-err{color:var(--danger);font-size:12.5px;margin-top:10px;min-height:16px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel-2);
+    border:1px solid var(--accent);color:var(--ink);padding:10px 16px;border-radius:8px;z-index:30;font-size:13px}
 </style>
 </head>
 <body>
 
-<!-- password gate -->
 <div class="gate" id="gate">
   <form class="card" id="gateForm">
     <h1>Octopus Traffic Monitor</h1>
@@ -103,14 +114,9 @@
   </form>
 </div>
 
-<!-- dashboard -->
 <div class="wrap" id="app" hidden>
   <header>
-    <div class="brand">
-      <span class="dot" id="liveDot"></span>
-      Octopus Traffic Monitor
-      <small id="target"></small>
-    </div>
+    <div class="brand"><span class="dot" id="liveDot"></span> Octopus Traffic Monitor</div>
     <div class="controls">
       <span class="updated" id="updated"></span>
       <button id="autoBtn" class="on">Auto-refresh: on</button>
@@ -126,8 +132,30 @@
       <button data-f="" class="on">All</button>
       <button data-f="synthetic">Synthetic</button>
       <button data-f="organic">Organic</button>
+      <button data-f="labeled">Labeled</button>
+      <button data-f="unlabeled">Unlabeled</button>
     </div>
+    <span class="spacer"></span>
+    <button id="exportCsv">Export CSV</button>
+    <button id="exportJson">Export JSON</button>
+    <button id="deleteAll" class="danger">Delete all shown</button>
     <span class="count" id="rowCount"></span>
+  </div>
+
+  <div class="bulkbar" id="bulkbar" hidden>
+    <span class="selcount" id="selCount">0 selected</span>
+    <span class="sep"></span>
+    <button class="lab-preset" data-label="bot">bot</button>
+    <button class="lab-preset" data-label="benign">benign</button>
+    <button class="lab-preset" data-label="attack">attack</button>
+    <button class="lab-preset" data-label="suspicious">suspicious</button>
+    <input id="labelInput" placeholder="custom label" maxlength="60">
+    <button id="applyLabel">Apply label</button>
+    <button id="clearLabel">Clear label</button>
+    <span class="sep"></span>
+    <button id="delSel" class="danger">Delete</button>
+    <button id="exportSelCsv">Export selected</button>
+    <button id="clearSel">Clear selection</button>
   </div>
 
   <div class="tablewrap">
@@ -135,143 +163,195 @@
       <table>
         <thead>
           <tr>
-            <th>Time</th><th>Type</th><th>IP</th><th>Country</th>
+            <th class="chk"><input type="checkbox" id="selectAll" title="Select all shown"></th>
+            <th>Time</th><th>Type</th><th>Label</th><th>IP</th><th>Country</th>
             <th>Method</th><th>Path</th><th>User-Agent</th><th>QA id</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
-    <div class="empty" id="emptyState" hidden>No hits yet. Point traffic at this site and it will appear here.</div>
+    <div class="empty" id="emptyState" hidden>No hits yet. Send traffic to /logging and it will appear here.</div>
     <div class="err" id="errState" hidden></div>
   </div>
 </div>
+<div class="toast" id="toast" hidden></div>
 
 <script>
 (function(){
   "use strict";
   var KEY="octopus_dash_key";
   var key=null, filter="", auto=true, timer=null, poll=4000;
-
+  var selected=new Set(), lastRows=[];
   var $=function(id){return document.getElementById(id)};
 
-  function saveKey(k){ try{sessionStorage.setItem(KEY,k)}catch(e){} }
-  function loadKey(){ try{return sessionStorage.getItem(KEY)}catch(e){return null} }
-  function clearKey(){ try{sessionStorage.removeItem(KEY)}catch(e){} }
+  function saveKey(k){try{sessionStorage.setItem(KEY,k)}catch(e){}}
+  function loadKey(){try{return sessionStorage.getItem(KEY)}catch(e){return null}}
+  function clearKey(){try{sessionStorage.removeItem(KEY)}catch(e){}}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+  function ago(iso){var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
+    if(s<60)return Math.floor(s)+"s ago";if(s<3600)return Math.floor(s/60)+"m ago";
+    if(s<86400)return Math.floor(s/3600)+"h ago";return Math.floor(s/86400)+"d ago"}
+  function clock(iso){return new Date(iso).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}
+  function toast(msg){var t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(t._t);t._t=setTimeout(function(){t.hidden=true},2600)}
 
-  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
-
-  function ago(iso){
-    var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
-    if(s<60)return Math.floor(s)+"s ago";
-    if(s<3600)return Math.floor(s/60)+"m ago";
-    if(s<86400)return Math.floor(s/3600)+"h ago";
-    return Math.floor(s/86400)+"d ago";
-  }
-  function clock(iso){var d=new Date(iso);return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}
-
-  async function fetchData(){
-    var url="/api/data?limit=150"+(filter?("&filter="+filter):"");
-    var res=await fetch(url,{headers:{"x-dash-key":key}});
-    if(res.status===401){throw {code:401}}
+  async function api(path, opts){
+    opts=opts||{};opts.headers=Object.assign({"x-dash-key":key},opts.headers||{});
+    var res=await fetch(path,opts);
+    if(res.status===401)throw {code:401};
     if(!res.ok){var j=await res.json().catch(function(){return{}});throw {code:res.status,msg:j.error||("HTTP "+res.status)}}
-    return res.json();
+    return res;
   }
+  function fetchData(){return api("/api/data?limit=200"+(filter?("&filter="+filter):"")).then(function(r){return r.json()})}
 
   function renderStats(s){
     var tiles=[
       {label:"Total hits",num:s.total,cls:""},
       {label:"Synthetic",num:s.synthetic,cls:"syn",sub:"tagged by generator"},
       {label:"Organic",num:s.organic,cls:"org",sub:"no QA tag"},
+      {label:"Labeled",num:s.labeled,cls:"lab",sub:"tagged by you"},
       {label:"Unique IPs",num:s.unique_ips,cls:""},
-      {label:"Last 5 min",num:s.last5m,cls:""},
       {label:"Last hit",num:s.last_hit?ago(s.last_hit):"—",cls:"",sub:s.last_hit?clock(s.last_hit):""}
     ];
     $("stats").innerHTML=tiles.map(function(t){
-      return '<div class="tile '+t.cls+'"><div class="label">'+t.label+'</div>'+
-        '<div class="num">'+esc(t.num)+'</div>'+(t.sub?'<div class="sub">'+esc(t.sub)+'</div>':'')+'</div>';
-    }).join("");
+      return '<div class="tile '+t.cls+'"><div class="label">'+t.label+'</div><div class="num">'+esc(t.num)+'</div>'+(t.sub?'<div class="sub">'+esc(t.sub)+'</div>':'')+'</div>'}).join("");
   }
 
   function renderRows(rows){
+    lastRows=rows;
     $("rowCount").textContent=rows.length+" shown";
-    if(!rows.length){$("rows").innerHTML="";$("emptyState").hidden=false;return}
+    if(!rows.length){$("rows").innerHTML="";$("emptyState").hidden=false;syncBulk();return}
     $("emptyState").hidden=true;
     $("rows").innerHTML=rows.map(function(r){
+      var id=String(r.id);var on=selected.has(id);
       var chip=r.is_synthetic?'<span class="chip syn">synthetic</span>':'<span class="chip org">organic</span>';
-      return "<tr>"+
+      var lab=r.label?'<span class="lchip" title="'+esc(r.note||"")+'">'+esc(r.label)+'</span>':'<span style="color:var(--faint)">—</span>';
+      return '<tr class="'+(on?"sel":"")+'" data-id="'+id+'">'+
+        '<td class="chk"><input type="checkbox" class="rowchk" data-id="'+id+'"'+(on?" checked":"")+'></td>'+
         '<td class="time" title="'+esc(r.received_at)+'">'+esc(ago(r.received_at))+"</td>"+
-        "<td>"+chip+"</td>"+
-        '<td class="m">'+esc(r.ip||"—")+"</td>"+
-        "<td>"+esc(r.geo_country||"—")+"</td>"+
-        '<td class="m">'+esc(r.method||"")+"</td>"+
-        '<td class="m path">'+esc(r.path||"")+"</td>"+
+        "<td>"+chip+"</td><td>"+lab+"</td>"+
+        '<td class="m">'+esc(r.ip||"—")+"</td><td>"+esc(r.geo_country||"—")+"</td>"+
+        '<td class="m">'+esc(r.method||"")+'</td><td class="m">'+esc(r.path||"")+"</td>"+
         '<td class="ua" title="'+esc(r.ua||"")+'">'+esc(r.ua||"—")+"</td>"+
-        '<td class="m">'+esc(r.qa_test_id||"—")+"</td>"+
-      "</tr>";
-    }).join("");
+        '<td class="m">'+esc(r.qa_test_id||"—")+"</td></tr>"}).join("");
+    syncBulk();
+  }
+
+  function syncBulk(){
+    var n=selected.size;
+    $("bulkbar").hidden=n===0;
+    $("selCount").textContent=n+" selected";
+    var visIds=lastRows.map(function(r){return String(r.id)});
+    var allOn=visIds.length>0 && visIds.every(function(i){return selected.has(i)});
+    $("selectAll").checked=allOn;
   }
 
   async function tick(){
     try{
       var d=await fetchData();
       $("errState").hidden=true;
-      renderStats(d.stats);
-      renderRows(d.rows);
+      renderStats(d.stats);renderRows(d.rows);
       $("updated").textContent="updated "+new Date().toLocaleTimeString();
       $("liveDot").className="dot"+(auto?" live":"");
     }catch(e){
       if(e.code===401){lock("Session expired. Enter the password again.");return}
-      $("errState").hidden=false;
-      $("errState").textContent="Error: "+(e.msg||"could not reach the server");
+      $("errState").hidden=false;$("errState").textContent="Error: "+(e.msg||"could not reach the server");
     }
   }
+  function schedule(){if(timer)clearInterval(timer);
+    if(auto)timer=setInterval(function(){if(!document.hidden && selected.size===0)tick()},poll)}
 
-  function schedule(){
-    if(timer)clearInterval(timer);
-    if(auto)timer=setInterval(function(){if(!document.hidden)tick()},poll);
-  }
+  function start(){$("gate").hidden=true;$("app").hidden=false;tick();schedule()}
+  function lock(msg){clearKey();key=null;if(timer)clearInterval(timer);
+    $("app").hidden=true;$("gate").hidden=false;$("gateErr").textContent=msg||"";$("pw").value="";$("pw").focus()}
 
-  function start(){
-    $("gate").hidden=true;$("app").hidden=false;
-    tick();schedule();
-  }
-  function lock(msg){
-    clearKey();key=null;
-    if(timer)clearInterval(timer);
-    $("app").hidden=true;$("gate").hidden=false;
-    $("gateErr").textContent=msg||"";
-    $("pw").value="";$("pw").focus();
-  }
+  /* ---- selection ---- */
+  $("rows").addEventListener("change",function(ev){
+    var cb=ev.target.closest(".rowchk");if(!cb)return;
+    var id=cb.getAttribute("data-id");
+    if(cb.checked)selected.add(id);else selected.delete(id);
+    var tr=cb.closest("tr");if(tr)tr.className=cb.checked?"sel":"";
+    syncBulk();
+  });
+  $("selectAll").addEventListener("change",function(){
+    var on=this.checked;
+    lastRows.forEach(function(r){var id=String(r.id);if(on)selected.add(id);else selected.delete(id)});
+    renderRows(lastRows);
+  });
+  $("clearSel").addEventListener("click",function(){selected.clear();renderRows(lastRows)});
 
-  // gate submit
+  /* ---- label / update ---- */
+  function ids(){return Array.from(selected).map(Number)}
+  async function applyLabel(label){
+    if(!selected.size)return;
+    try{
+      var r=await api("/api/label",{method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({ids:ids(),label:label,note:($("labelInput").dataset.note||"")||undefined})});
+      var j=await r.json();toast((label?("Labeled '"+label+"' "):"Cleared label on ")+j.updated+" row(s)");
+      tick();
+    }catch(e){toast("Failed: "+(e.msg||e.code))}
+  }
+  $("applyLabel").addEventListener("click",function(){
+    var v=$("labelInput").value.trim();if(!v)return toast("Type a label first, or use a preset");applyLabel(v)});
+  $("clearLabel").addEventListener("click",function(){applyLabel(null)});
+  [].forEach.call(document.querySelectorAll(".lab-preset"),function(b){
+    b.addEventListener("click",function(){applyLabel(b.getAttribute("data-label"))})});
+
+  /* ---- delete ---- */
+  $("delSel").addEventListener("click",async function(){
+    if(!selected.size)return;
+    if(!confirm("Delete "+selected.size+" selected row(s)? This cannot be undone."))return;
+    try{var r=await api("/api/delete",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({ids:ids()})});var j=await r.json();
+      selected.clear();toast("Deleted "+j.deleted+" row(s)");tick();
+    }catch(e){toast("Delete failed: "+(e.msg||e.code))}
+  });
+  $("deleteAll").addEventListener("click",async function(){
+    var label=filter?("all "+filter):"ALL";
+    if(!confirm("Delete "+label+" rows currently matching this view? This cannot be undone."))return;
+    try{var r=await api("/api/delete",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({all:true,filter:filter||undefined})});var j=await r.json();
+      selected.clear();toast("Deleted "+j.deleted+" row(s)");tick();
+    }catch(e){toast("Delete failed: "+(e.msg||e.code))}
+  });
+
+  /* ---- export ---- */
+  function download(name,text,type){
+    var blob=new Blob([text],{type:type});var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(url);a.remove()},100);
+  }
+  async function exportAll(format){
+    try{var r=await api("/api/export?format="+format+(filter?("&filter="+filter):""));
+      var blob=await r.blob();var url=URL.createObjectURL(blob);
+      var a=document.createElement("a");a.href=url;a.download="hits."+format;document.body.appendChild(a);a.click();
+      setTimeout(function(){URL.revokeObjectURL(url);a.remove()},100);toast("Exported "+format.toUpperCase());
+    }catch(e){toast("Export failed: "+(e.msg||e.code))}
+  }
+  $("exportCsv").addEventListener("click",function(){exportAll("csv")});
+  $("exportJson").addEventListener("click",function(){exportAll("json")});
+  $("exportSelCsv").addEventListener("click",function(){
+    var chosen=lastRows.filter(function(r){return selected.has(String(r.id))});
+    if(!chosen.length)return toast("No rows selected");
+    var cols=Object.keys(chosen[0]);var e=function(v){return '"'+String(v==null?"":v).split('"').join('""')+'"'};
+    var lines=[cols.join(",")];chosen.forEach(function(r){lines.push(cols.map(function(c){return e(r[c])}).join(","))});
+    download("hits-selected.csv",lines.join("\n"),"text/csv");toast("Exported "+chosen.length+" selected");
+  });
+
+  /* ---- gate + controls ---- */
   $("gateForm").addEventListener("submit",async function(ev){
-    ev.preventDefault();
-    key=$("pw").value;
-    $("gateErr").textContent="Checking…";
-    try{ await fetchData(); saveKey(key); $("gateErr").textContent=""; start(); }
-    catch(e){ if(e.code===401){$("gateErr").textContent="Wrong password."}
-      else{$("gateErr").textContent=e.msg||"Could not connect."} }
+    ev.preventDefault();key=$("pw").value;$("gateErr").textContent="Checking…";
+    try{await fetchData();saveKey(key);$("gateErr").textContent="";start();}
+    catch(e){if(e.code===401){$("gateErr").textContent="Wrong password."}else{$("gateErr").textContent=e.msg||"Could not connect."}}
   });
-
-  // controls
   $("refreshBtn").addEventListener("click",tick);
-  $("autoBtn").addEventListener("click",function(){
-    auto=!auto;this.textContent="Auto-refresh: "+(auto?"on":"off");this.className=auto?"on":"";
-    $("liveDot").className="dot"+(auto?" live":"");schedule();
-  });
+  $("autoBtn").addEventListener("click",function(){auto=!auto;this.textContent="Auto-refresh: "+(auto?"on":"off");this.className=auto?"on":"";$("liveDot").className="dot"+(auto?" live":"");schedule()});
   $("lockBtn").addEventListener("click",function(){lock("")});
-  $("seg").addEventListener("click",function(ev){
-    var b=ev.target.closest("button");if(!b)return;
-    filter=b.getAttribute("data-f")||"";
-    [].forEach.call(this.children,function(c){c.className=c===b?"on":""});
-    tick();
-  });
+  $("seg").addEventListener("click",function(ev){var b=ev.target.closest("button");if(!b)return;
+    filter=b.getAttribute("data-f")||"";[].forEach.call(this.children,function(c){c.className=c===b?"on":""});selected.clear();tick()});
 
-  // boot: reuse a saved password if present
   key=loadKey();
-  if(key){ fetchData().then(function(){start()}).catch(function(){lock("")}); }
+  if(key){fetchData().then(function(){start()}).catch(function(){lock("")})}
 })();
 </script>
 </body>
