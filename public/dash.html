@@ -304,7 +304,25 @@
       ["User-Agent", esc(r.ua||"—"), "mono"]
     ];
     var dl=pairs.map(function(p){return "<dt>"+p[0]+"</dt><dd"+(p[2]?' class="'+p[2]+'"':"")+">"+p[1]+"</dd>"}).join("");
-    $("modalCard").innerHTML='<h2>Request detail <button class="x" id="modalX" title="Close">&times;</button></h2><dl class="dl">'+dl+"</dl>";
+
+    // browser fingerprint section (present only if the browser ran fp.js)
+    var fpHtml="";
+    if(r.fp && typeof r.fp==="object"){
+      var order=["webdriver","webgl","canvas","audio","fonts","cores","memory","screen","colorDepth",
+                 "maxTouch","touch","pointerCoarse","timezone","tzOffset","platform","vendor","languages",
+                 "plugins","chrome","cookiesEnabled","uaHighEntropy"];
+      var keys=order.filter(function(k){return r.fp[k]!==undefined}).concat(Object.keys(r.fp).filter(function(k){return order.indexOf(k)<0 && k!=="ua"}));
+      var fpPairs=keys.map(function(k){
+        var v=r.fp[k];if(v&&typeof v==="object")v=JSON.stringify(v);
+        var mono=(k==="webgl"||k==="canvas"||k==="audio"||k==="uaHighEntropy");
+        var flag=(k==="webdriver"&&r.fp[k]===true)?' style="color:var(--danger)"':"";
+        return "<dt>"+esc(k)+"</dt><dd"+(mono?' class="mono"':"")+flag+">"+esc(v)+"</dd>";
+      }).join("");
+      fpHtml='<h2 style="margin-top:22px;border-top:1px solid var(--rule);padding-top:16px">Browser fingerprint</h2><dl class="dl">'+fpPairs+"</dl>";
+    } else {
+      fpHtml='<p style="color:var(--faint);margin-top:18px;font-size:12.5px">No browser fingerprint for this hit. Only page visits that run fp.js produce one (a plain beacon or bot request does not).</p>';
+    }
+    $("modalCard").innerHTML='<h2>Request detail <button class="x" id="modalX" title="Close">&times;</button></h2><dl class="dl">'+dl+"</dl>"+fpHtml;
     $("modal").hidden=false;
     $("modalX").addEventListener("click",closeDetail);
   }

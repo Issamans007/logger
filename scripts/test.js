@@ -64,6 +64,18 @@ const ok = (n, c, x) => { c ? (pass++, console.log("  PASS " + n + (x ? "  " + x
   const lab = (await pool.query("select label, note from public.hits where id=$1", [rowId])).rows[0];
   ok("label + note saved", lab.label === "bot" && lab.note === "test note", JSON.stringify(lab));
 
+  // 7b. fingerprint post -> stored on the row
+  r = await fetch(base + "/fp", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: Number(rowId), fp: { webdriver: false, webgl: "ARM | Mali-G57", canvas: "a1b2c3", cores: 8 } }) });
+  ok("/fp accepts a fingerprint", r.status === 200 && (await r.json()).ok === true);
+  const fpRow = (await pool.query("select fp from public.hits where id=$1", [rowId])).rows[0].fp;
+  ok("fingerprint stored + queryable", fpRow && fpRow.webgl === "ARM | Mali-G57" && fpRow.cores === 8, JSON.stringify(fpRow));
+
+  // 7c. GET /logging returns a page that loads fp.js
+  r = await fetch(base + "/logging");
+  const page = await r.text();
+  ok("GET /logging serves the fingerprint page", page.includes("/fp.js") && page.includes("__oid"));
+
   // 8. export returns a CSV attachment
   r = await fetch(base + "/api/export?format=csv", { headers: { "x-dash-key": pw } });
   const cd = r.headers.get("content-disposition") || "";

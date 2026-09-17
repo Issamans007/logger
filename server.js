@@ -105,20 +105,50 @@ async function logHit(req, res) {
   const cols = Object.keys(row);
   const sql =
     "insert into public.hits (" + cols.join(",") + ") values (" +
-    cols.map((_, i) => "$" + (i + 1)).join(",") + ")";
+    cols.map((_, i) => "$" + (i + 1)).join(",") + ") returning id";
+  let id = null;
   try {
-    await pool.query(sql, cols.map((c) => row[c]));
+    id = (await pool.query(sql, cols.map((c) => row[c]))).rows[0].id;
   } catch (e) {
     console.error("log insert failed:", e.message);
   }
-  res
-    .status(200)
-    .set("cache-control", "no-store")
-    .type("html")
-    .send("<!doctype html><meta charset=utf-8><title>ok</title>ok");
+
+  // For a real page load (GET), return a page that runs fp.js, so the browser
+  // computes and posts back its fingerprint, keyed to this row. A beacon POST
+  // just gets "ok" — it isn't executing scripts.
+  if (req.method === "GET" && id != null) {
+    res
+      .status(200)
+      .set("cache-control", "no-store")
+      // ask the browser to include high-entropy UA hints on later requests too
+      .set("Accept-CH", "Sec-CH-UA-Arch, Sec-CH-UA-Model, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List, Sec-CH-UA-Bitness")
+      .type("html")
+      .send(
+        "<!doctype html><meta charset=utf-8><title>ok</title>" +
+        "<script>window.__oid=" + Number(id) + ";</script><script src=\"/fp.js\"></script>" +
+        "<body style=\"font:14px system-ui;margin:0;display:grid;place-items:center;height:100vh;background:#0b0f12;color:#8b97a0\">ok</body>"
+      );
+  } else {
+    res.status(200).set("cache-control", "no-store").type("html").send("<!doctype html><meta charset=utf-8>ok");
+  }
 }
 app.all("/logging", logHit);
 app.all("/logging/*", logHit);
+
+// The browser posts its computed fingerprint here, keyed to the hit's id.
+// Public (like /logging) — it only adds fingerprint data to an existing row.
+app.post("/fp", async (req, res) => {
+  const { id, fp } = req.body || {};
+  if (!id || typeof fp !== "object" || Array.isArray(fp)) return res.status(400).json({ error: "need id + fp object" });
+  const json = JSON.stringify(fp);
+  if (json.length > 100000) return res.status(413).json({ error: "fingerprint too large" });
+  try {
+    await pool.query("update public.hits set fp = $1 where id = $2", [json, Number(id)]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // -- 2. the dashboard page -------------------------------------------------
 app.get("/dashboard", (_req, res) => res.sendFile(path.join(PUBLIC, "dash.html")));
@@ -145,7 +175,7 @@ app.get("/api/data", async (req, res) => {
     const rows = (await pool.query(
       `select id, received_at, is_synthetic, host(ip) as ip, ip_chain, geo_country, geo_org,
               method, path, query, user_agent as ua, accept_language, referer,
-              sec_ch_ua_platform, qa_test_id, label, note
+              sec_ch_ua_platform, qa_test_id, label, note, fp
        from public.hits ${where}
        order by received_at desc limit $1`,
       [limit]

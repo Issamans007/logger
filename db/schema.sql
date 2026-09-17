@@ -60,6 +60,10 @@ create table if not exists public.hits (
   label         text,
   note          text,
 
+  -- browser fingerprint, posted by fp.js from the visitor's browser --------
+  -- (canvas, webgl/GPU, audio, fonts, cores, webdriver, timezone, …)
+  fp            jsonb,
+
   -- everything else, verbatim ---------------------------------------------
   headers       jsonb,
 
